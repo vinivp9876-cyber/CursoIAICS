@@ -1,7 +1,0 @@
-https://github.com/vinivp9876-cyber/cursoIACS.git
-
-vinivp9876-cyber
-vini.vp9876@gmail.com 
-
-git config --global user.name "vinivp9876-cyber"
-git config --global user.email "vini.vp9876@gmail.com"
