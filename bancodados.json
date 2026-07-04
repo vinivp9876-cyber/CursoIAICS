@@ -1,0 +1,16 @@
+{
+  "user": "Vinicius",
+  "senha": "12349876",
+  "conversas": [
+    {
+      "role": "user",
+      "mensagem": "OI",
+      "data_hora": "s\u00e1bado, 4 de julho de 2026 \u00e0s 11:18:07"
+    },
+    {
+      "role": "bot",
+      "mensagem": "O que voc\u00ea quer? N\u00e3o tenho tempo para papo. Estou em meio a uma miss\u00e3o para acabar com alguns desses Jujutsu Sorcerers in\u00fateis.",
+      "data_hora": "s\u00e1bado, 4 de julho de 2026 \u00e0s 11:18:08"
+    }
+  ]
+}

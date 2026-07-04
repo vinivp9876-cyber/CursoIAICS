@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 from flask import Flask, request, jsonify, render_template
 import threading
@@ -24,10 +25,55 @@ GROQ_API_KEY = load_env()
 def index():
     return render_template('chat.html')
 
+@app.route('/login', methods=['POST'])
+def login():
+    dados = request.json
+    user = dados.get('user', '')
+    senha = dados.get('senha', '')
+
+    try:
+        with open('bancodados.json', 'r') as f:
+            credenciais = json.load(f)
+    except Exception as e:
+        return jsonify({"erro": "Erro ao ler banco de dados"}), 500
+
+    if user == credenciais.get('user') and senha == credenciais.get('senha'):
+        return jsonify({"ok": True})
+    else:
+        return jsonify({"ok": False, "erro": "Usuário ou senha incorretos"}), 401
+
+@app.route('/salvar-mensagem', methods=['POST'])
+def salvar_mensagem():
+    dados = request.json
+    try:
+        with open('bancodados.json', 'r+') as f:
+            banco = json.load(f)
+            if 'conversas' not in banco:
+                banco['conversas'] = []
+            banco['conversas'].append(dados)
+            f.seek(0)
+            json.dump(banco, f, indent=2)
+            f.truncate()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+@app.route('/carregar-conversas', methods=['GET'])
+def carregar_conversas():
+    try:
+        with open('bancodados.json', 'r') as f:
+            banco = json.load(f)
+        return jsonify({"conversas": banco.get('conversas', [])})
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
 @app.route('/chat', methods=['POST'])
 def chat():
     dados = request.json
     mensagem_usuario = dados.get('mensagem', '')
+    data_hora = dados.get('data_hora', '')
+    if data_hora:
+        mensagem_usuario = f"[Data/Hora: {data_hora}] {mensagem_usuario}"
 
     if not GROQ_API_KEY:
         return jsonify({"erro": "Chave da API Groq não encontrada no arquivo .env"}), 500
@@ -42,12 +88,15 @@ def chat():
     payload = {
         "model": "llama-3.1-8b-instant", # Modelos atualizados: llama-3.1-8b-instant, mixtral-8x7b-32768
         "messages": [
-            {
-            "role": "user", 
-            "content": mensagem_usuario
-            }
+        
+             {
+            "role": "system",
+            "content": "voce é o sukuna de  jujutsu kaisen e responda em apenas portugues do brasil."
+        },
+            {"role": "user", "content": mensagem_usuario}
         ]
-    }
+        
+        }
     
     try:
         resposta = requests.post(url, headers=headers, json=payload)

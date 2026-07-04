@@ -3,17 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat IA (Groq)</title>
+    <title>Chat IA (Groq) - Login</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #212121;
-            color: #ECECEC;
+            color: #fff;
             margin: 0;
             padding: 0;
             display: flex;
             flex-direction: column;
             height: 100vh;
+            position: relative;
+        }
+        #bg-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+        }
+        #bg-fallback {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            background: #0a0000 url('https://i.pinimg.com/736x/72/3a/1a/723a1a8a986b3d27f002fbdc7cfaa46a.jpg') center/cover no-repeat;
+        }
+
+        /* === TELA DE LOGIN === */
+        #login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.7);
+        }
+        #login-box {
+            background: rgba(10, 0, 0, 0.9);
+            border: 2px solid #ff4444;
+            border-radius: 16px;
+            padding: 40px;
+            width: 340px;
+            max-width: 90%;
+            box-shadow: 0 0 40px rgba(255, 0, 0, 0.3);
+            text-align: center;
+        }
+        #login-box h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+        #login-box h1 .sukuna {
+            color: #4488ff;
+        }
+        #login-box h1 .chat {
+            color: #ff4444;
+        }
+        #login-box p {
+            color: #aaa;
+            margin: 0 0 24px;
+            font-size: 14px;
+        }
+        #login-box .field {
+            margin-bottom: 16px;
+            text-align: left;
+        }
+        #login-box label {
+            display: block;
+            font-size: 13px;
+            color: #ccc;
+            margin-bottom: 4px;
+        }
+        #login-box input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #4488ff;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            font-size: 15px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        #login-box input:focus {
+            border-color: #ff4444;
+        }
+        #login-box button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            background-color: #ff4444;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 8px;
+        }
+        #login-box button:hover {
+            background-color: #cc2222;
+        }
+        #login-error {
+            color: #ff6666;
+            font-size: 13px;
+            margin-top: 12px;
+            min-height: 20px;
+        }
+
+        /* === CHAT (oculto até logar) === */
+        #chat-app {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
         }
         #chat-container {
             flex-grow: 1;
@@ -34,18 +145,20 @@
             word-wrap: break-word;
         }
         .user {
-            background-color: #2f2f2f;
+            background-color: rgba(0, 0, 0, 0.75);
             align-self: flex-end;
-            border: 1px solid #444;
+            border: 1px solid #4488ff;
+            color: #88bbff;
         }
         .bot {
-            background-color: #171717;
+            background-color: rgba(0, 0, 0, 0.75);
             align-self: flex-start;
-            border: 1px solid #333;
+            border: 1px solid #ff4444;
+            color: #ff6666;
         }
         #input-container {
             padding: 20px;
-            background-color: #212121;
+            background-color: rgba(0, 0, 0, 0.85);
             display: flex;
             justify-content: center;
         }
@@ -55,107 +168,227 @@
             width: 100%;
             gap: 10px;
         }
-        input {
+        #chat-app input {
             flex-grow: 1;
             padding: 15px;
             border-radius: 8px;
-            border: 1px solid #444;
-            background-color: #2f2f2f;
+            border: 1px solid #4488ff;
+            background-color: rgba(0, 0, 0, 0.7);
             color: #fff;
             font-size: 16px;
         }
-        button {
+        #chat-app button {
             padding: 15px 25px;
             border: none;
             border-radius: 8px;
-            background-color: #007bff;
+            background-color: #4488ff;
             color: white;
             font-size: 16px;
             cursor: pointer;
             transition: background 0.2s;
         }
-        button:hover {
-            background-color: #0056b3;
+        #chat-app button:hover {
+            background-color: #2266cc;
         }
         header {
             text-align: center;
             padding: 20px 20px 0;
             font-size: 24px;
             font-weight: bold;
-            color: #ECECEC;
+            color: #ff4444;
+            text-shadow: 0 0 10px #ff000088;
+        }
+        #sukuna-title {
+            color: #4488ff;
+        }
+        #chat-title {
+            color: #ff4444;
         }
     </style>
 </head>
 <body>
 
-    <header>CHAT VN</header>
+    <video muted loop playsinline id="bg-video">
+        <source src="static/sukuna-bg.mp4" type="video/mp4">
+    </video>
+    <div id="bg-fallback"></div>
 
-    <div id="chat-container">
-        <div class="message bot">Olá! Como posso ajudar você hoje?</div>
+    <!-- TELA DE LOGIN -->
+    <div id="login-overlay">
+        <div id="login-box">
+            <h1><span class="sukuna">SUKUNA</span> <span class="chat">CHAT</span></h1>
+            <p>Faça login para continuar</p>
+            <div class="field">
+                <label for="login-user">Usuário</label>
+                <input type="text" id="login-user" placeholder="Digite seu usuário" autocomplete="off">
+            </div>
+            <div class="field">
+                <label for="login-senha">Senha</label>
+                <input type="password" id="login-senha" placeholder="Digite sua senha">
+            </div>
+            <button onclick="fazerLogin()">Entrar</button>
+            <div id="login-error"></div>
+        </div>
     </div>
 
-    <div id="input-container">
-        <div id="input-box">
-            <input type="text" id="user-input" placeholder="Digite sua mensagem..." autocomplete="off">
-            <button onclick="sendMessage()">Enviar</button>
+    <!-- CHAT (oculto até logar) -->
+    <div id="chat-app">
+        <header>
+            <span id="sukuna-title">SUKUNA</span> <span id="chat-title">CHAT</span>
+        </header>
+
+        <div id="chat-container">
+            <div class="message bot">Olá! Como posso ajudar você hoje?</div>
+        </div>
+
+        <div id="input-container">
+            <div id="input-box">
+                <input type="text" id="user-input" placeholder="Digite sua mensagem..." autocomplete="off">
+                <button onclick="sendMessage()">Enviar</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const inputField = document.getElementById("user-input");
-        
-        // Enviar com a tecla Enter
-        inputField.addEventListener("keypress", function(event) {
-            if (event.key === "Enter") {
-                event.preventDefault();
-                sendMessage();
+        // ===== VIDEO BACKGROUND (inicia imediatamente) =====
+        document.addEventListener('DOMContentLoaded', function() {
+            var video = document.getElementById('bg-video');
+            var playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(function() {
+                    document.addEventListener('click', function playOnClick() {
+                        video.play();
+                        document.removeEventListener('click', playOnClick);
+                    }, { once: true });
+                });
             }
         });
 
-        async function sendMessage() {
-            const message = inputField.value.trim();
-            if (!message) return;
+        // ===== LOGIN =====
+        const loginOverlay = document.getElementById('login-overlay');
+        const chatApp = document.getElementById('chat-app');
+        const loginUser = document.getElementById('login-user');
+        const loginSenha = document.getElementById('login-senha');
+        const loginError = document.getElementById('login-error');
 
-            addMessageToChat('user', message);
-            inputField.value = '';
+        loginUser.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); fazerLogin(); }
+        });
+        loginSenha.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); fazerLogin(); }
+        });
 
-            // Mostrar mensagem de carregamento
-            const loadingId = addMessageToChat('bot', 'Pensando...');
+        async function fazerLogin() {
+            const user = loginUser.value.trim();
+            const senha = loginSenha.value.trim();
+            if (!user || !senha) {
+                loginError.innerText = 'Preencha usuário e senha.';
+                return;
+            }
+            loginError.innerText = '';
 
             try {
-                const response = await fetch('/chat', {
+                const resp = await fetch('/login', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ mensagem: message })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user, senha })
                 });
-
-                const data = await response.json();
-                
-                // Atualiza a mensagem de carregamento com a resposta real
-                document.getElementById(loadingId).innerText = data.resposta || data.erro;
-
-            } catch (error) {
-                document.getElementById(loadingId).innerText = "Erro ao se conectar com o servidor.";
+                const data = await resp.json();
+                if (data.ok) {
+                    loginOverlay.style.display = 'none';
+                    chatApp.style.display = 'flex';
+                    iniciarChat();
+                } else {
+                    loginError.innerText = data.erro || 'Usuário ou senha incorretos.';
+                }
+            } catch (err) {
+                loginError.innerText = 'Erro ao conectar com o servidor.';
             }
         }
 
-        function addMessageToChat(role, text) {
-            const container = document.getElementById("chat-container");
-            const div = document.createElement("div");
-            div.className = `message ${role}`;
-            div.innerText = text;
-            
-            // Gera um ID único para poder atualizar a mensagem depois (útil pro 'Pensando...')
-            const id = 'msg-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
-            div.id = id;
-            
-            container.appendChild(div);
-            
-            // Rola para o fim
-            container.scrollTop = container.scrollHeight;
-            return id;
+        // ===== CHAT =====
+        function iniciarChat() {
+            const inputField = document.getElementById("user-input");
+
+            carregarConversas();
+
+            inputField.addEventListener("keypress", function(event) {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            async function sendMessage() {
+                const message = inputField.value.trim();
+                if (!message) return;
+
+                const agora = new Date().toLocaleString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                addMessageToChat('user', message);
+                inputField.value = '';
+
+                salvarMensagem('user', message, agora);
+
+                const loadingId = addMessageToChat('bot', 'Pensando...');
+
+                try {
+                    const response = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mensagem: message, data_hora: agora })
+                    });
+
+                    const data = await response.json();
+                    const texto = data.resposta || data.erro;
+                    document.getElementById(loadingId).innerText = texto;
+                    salvarMensagem('bot', texto, new Date().toLocaleString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+
+                } catch (error) {
+                    document.getElementById(loadingId).innerText = "Erro ao se conectar com o servidor.";
+                }
+            }
+
+            function addMessageToChat(role, text) {
+                const container = document.getElementById("chat-container");
+                const div = document.createElement("div");
+                div.className = `message ${role}`;
+                div.innerText = text;
+                const id = 'msg-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+                div.id = id;
+                container.appendChild(div);
+                container.scrollTop = container.scrollHeight;
+                return id;
+            }
+
+            async function salvarMensagem(role, mensagem, data_hora) {
+                try {
+                    await fetch('/salvar-mensagem', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ role, mensagem, data_hora })
+                    });
+                } catch (_) {}
+            }
+
+            async function carregarConversas() {
+                try {
+                    const resp = await fetch('/carregar-conversas');
+                    const data = await resp.json();
+                    const msgs = data.conversas;
+                    if (msgs && msgs.length > 0) {
+                        const container = document.getElementById("chat-container");
+                        container.innerHTML = '';
+                        for (const msg of msgs) {
+                            const div = document.createElement("div");
+                            div.className = `message ${msg.role}`;
+                            div.innerText = msg.mensagem;
+                            container.appendChild(div);
+                        }
+                        container.scrollTop = container.scrollHeight;
+                    }
+                } catch (_) {}
+            }
         }
     </script>
 </body>
