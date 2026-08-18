@@ -110,3 +110,52 @@ button:hover {
 .reprovado {
     color: #c62828;
 }
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background: linear-gradient(135deg, #1a1a2e, #16213e);
+    }
+
+    .card {
+        background: #1e1e2f;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    h1 {
+        color: #e0e0e0;
+    }
+
+    .subtitulo {
+        color: #aaa;
+    }
+
+    .campo label {
+        color: #ccc;
+    }
+
+    .campo input {
+        background: #2a2a3d;
+        border-color: #444;
+        color: #e0e0e0;
+    }
+
+    .campo input::placeholder {
+        color: #777;
+    }
+
+    .campo input:focus {
+        border-color: #667eea;
+    }
+
+    .aprovado {
+        color: #66bb6a;
+    }
+
+    .recuperacao {
+        color: #ffa726;
+    }
+
+    .reprovado {
+        color: #ef5350;
+    }
+}
