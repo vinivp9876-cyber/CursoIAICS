@@ -1,104 +1,151 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const fs = require("fs");
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
+const SUPABASE_URL = process.env.SUPABASE_URL.replace(/\/+$/, "");
+const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY;
 
-function lerBanco() {
-    const dados = fs.readFileSync("banco.json");
-    return JSON.parse(dados);
-}
+async function consultarSupabase(rota, opcoes = {}) {
+    const resposta = await fetch(`${SUPABASE_URL}/${rota}`, {
+        ...opcoes,
+        headers: {
+            apikey: SUPABASE_SECRET_KEY,
+            Authorization: `Bearer ${SUPABASE_SECRET_KEY}`,
+            ...opcoes.headers
+        }
+    });
 
-function salvarBanco(banco) {
-    fs.writeFileSync(
-        "banco.json",
-        JSON.stringify(banco, null, 4)
-    );
+    if (resposta.status === 204) {
+        return [];
+    }
+
+    if (!resposta.ok) {
+        const erro = await resposta.text();
+        throw new Error(`Erro no Supabase (${resposta.status}): ${erro}`);
+    }
+
+    return resposta.json();
 }
 
 // LISTAR ALUNOS
-app.get("/alunos", (req, res) => {
-    const banco = lerBanco();
-    res.json(banco.alunos);
+app.get("/alunos", async (req, res) => {
+    try {
+        const alunos = await consultarSupabase("alunos?select=*");
+        res.json(alunos);
+    } catch (erro) {
+        res.status(500).json({ mensagem: erro.message });
+    }
 });
 
 // BUSCAR ALUNO POR NOME
-app.get("/alunos/busca", (req, res) => {
-    const nome = (req.query.nome || "").toLowerCase();
-    const banco = lerBanco();
+app.get("/alunos/busca", async (req, res) => {
+    try {
+        const nome = (req.query.nome || "").trim();
 
-    const resultados = banco.alunos.filter(aluno =>
-        aluno.nome.toLowerCase().includes(nome)
-    );
+        let rota = "alunos?select=*";
+        if (nome !== "") {
+            // ilike faz a busca ignorando maiúsculas e minúsculas
+            rota += `&nome=ilike.*${encodeURIComponent(nome)}*`;
+        }
 
-    res.json(resultados);
+        const alunos = await consultarSupabase(rota);
+        res.json(alunos);
+    } catch (erro) {
+        res.status(500).json({ mensagem: erro.message });
+    }
 });
 
 // CADASTRAR ALUNO
-app.post("/alunos", (req, res) => {
-    const banco = lerBanco();
-    const novoAluno = {
-        id: Date.now(),
-        nome: req.body.nome,
-        idade: req.body.idade,
-        nota1: req.body.nota1,
-        nota2: req.body.nota2
-    };
+app.post("/alunos", async (req, res) => {
+    try {
+        const novoAluno = {
+            nome: req.body.nome,
+            idade: req.body.idade,
+            nota1: req.body.nota1,
+            nota2: req.body.nota2
+        };
 
-    banco.alunos.push(novoAluno);
-    salvarBanco(banco);
+        const [aluno] = await consultarSupabase("alunos", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Prefer: "return=representation"
+            },
+            body: JSON.stringify(novoAluno)
+        });
 
-    res.json({
-        mensagem: "Aluno cadastrado com sucesso!"
-    });
+        res.json({
+            mensagem: "Aluno cadastrado com sucesso!",
+            aluno
+        });
+    } catch (erro) {
+        res.status(500).json({ mensagem: erro.message });
+    }
 });
 
 // ALTERAR ALUNO
-app.put("/alunos/:id", (req, res) => {
-    const banco = lerBanco();
-    const id = Number(req.params.id);
-    const aluno = banco.alunos.find(a => a.id === id);
+app.put("/alunos/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
 
-    if (!aluno) {
-        return res.status(404).json({
-            mensagem: "Aluno não encontrado!"
+        const dados = {};
+        if (req.body.nome !== undefined) dados.nome = req.body.nome;
+        if (req.body.idade !== undefined) dados.idade = req.body.idade;
+        if (req.body.nota1 !== undefined) dados.nota1 = req.body.nota1;
+        if (req.body.nota2 !== undefined) dados.nota2 = req.body.nota2;
+
+        const [aluno] = await consultarSupabase(`alunos?id=eq.${id}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                Prefer: "return=representation"
+            },
+            body: JSON.stringify(dados)
         });
+
+        if (!aluno) {
+            return res.status(404).json({
+                mensagem: "Aluno não encontrado!"
+            });
+        }
+
+        res.json({
+            mensagem: "Aluno atualizado com sucesso!",
+            aluno
+        });
+    } catch (erro) {
+        res.status(500).json({ mensagem: erro.message });
     }
-
-    if (req.body.nome !== undefined) aluno.nome = req.body.nome;
-    if (req.body.idade !== undefined) aluno.idade = req.body.idade;
-    if (req.body.nota1 !== undefined) aluno.nota1 = req.body.nota1;
-    if (req.body.nota2 !== undefined) aluno.nota2 = req.body.nota2;
-
-    salvarBanco(banco);
-
-    res.json({
-        mensagem: "Aluno atualizado com sucesso!",
-        aluno
-    });
 });
 
 // DELETAR ALUNO
-app.delete("/alunos/:id", (req, res) => {
-    const banco = lerBanco();
-    const id = Number(req.params.id);
-    const index = banco.alunos.findIndex(a => a.id === id);
+app.delete("/alunos/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
 
-    if (index === -1) {
-        return res.status(404).json({
-            mensagem: "Aluno não encontrado!"
+        const deletados = await consultarSupabase(`alunos?id=eq.${id}`, {
+            method: "DELETE",
+            headers: {
+                Prefer: "return=representation"
+            }
         });
+
+        if (deletados.length === 0) {
+            return res.status(404).json({
+                mensagem: "Aluno não encontrado!"
+            });
+        }
+
+        res.json({
+            mensagem: "Aluno deletado com sucesso!"
+        });
+    } catch (erro) {
+        res.status(500).json({ mensagem: erro.message });
     }
-
-    banco.alunos.splice(index, 1);
-    salvarBanco(banco);
-
-    res.json({
-        mensagem: "Aluno deletado com sucesso!"
-    });
 });
 
 app.listen(3000, () => {
