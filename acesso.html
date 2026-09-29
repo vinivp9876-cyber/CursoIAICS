@@ -1,0 +1,349 @@
+do lado <!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acesso Negado - Face Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            background: transparent;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            z-index: 1;
+            background: transparent;
+        }
+        
+        .half {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .left-side {
+            background: transparent;
+            color: #eaeaea;
+        }
+        
+        .right-side {
+            background: transparent;
+            color: #eaeaea;
+        }
+        
+        .half.access-denied {
+            background: linear-gradient(135deg, rgba(255,0,0,0.9) 0%, rgba(204,0,0,0.9) 50%, rgba(153,0,0,0.9) 100%);
+            animation: pulse 0.5s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+        
+        .content {
+            text-align: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .content h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .content p {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+        
+        .access-denied .content h1 {
+            font-size: 4rem;
+            color: #fff;
+            text-shadow: 0 0 20px #fff, 0 0 40px #ff0000, 0 0 60px #ff0000;
+            animation: glow 1s infinite alternate;
+        }
+        
+        @keyframes glow {
+            0% { text-shadow: 0 0 20px #fff, 0 0 40px #ff0000, 0 0 60px #ff0000; }
+            100% { text-shadow: 0 0 30px #fff, 0 0 60px #ff0000, 0 0 90px #ff0000; }
+        }
+        
+        .divider {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 4px;
+            height: 100%;
+            background: rgba(255,255,255,0.3);
+            transform: translateX(-50%);
+            z-index: 5;
+        }
+        
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 50%;
+        }
+        
+        video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+            opacity: 0.4;
+        }
+        
+        .status {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            background: rgba(0,0,0,0.9);
+            color: #fff;
+            border-radius: 20px;
+            font-size: 1rem;
+            z-index: 100;
+            max-width: 90%;
+            text-align: center;
+            border: 2px solid #444;
+        }
+        
+        .status.detected {
+            background: rgba(255,0,0,0.9);
+            border-color: #ff0000;
+        }
+        
+        .status.error {
+            background: rgba(255,100,0,0.9);
+            border-color: #ff6600;
+        }
+        
+        .debug-info {
+            position: fixed;
+            top: 60px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            color: #0f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            z-index: 1000;
+            max-width: 400px;
+        }
+        
+        .instructions {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: rgba(255,255,255,0.8);
+            font-size: 0.9rem;
+            z-index: 100;
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+    <video id="video" autoplay muted playsinline></video>
+    
+    <div class="instructions">
+        Posicione seu rosto no lado direito para ver "ACESSO NEGADO"
+    </div>
+    
+    <div class="container">
+        <div class="half left-side" id="leftSide">
+            <div class="content">
+                <h1>LADO SEGURO</h1>
+                <p>Nada acontece aqui</p>
+            </div>
+        </div>
+        
+        <div class="half right-side" id="rightSide">
+            <div class="content">
+                <h1>ZONA DE PERIGO</h1>
+                <p>Entre se tiver coragem</p>
+            </div>
+        </div>
+        
+        <div class="divider"></div>
+    </div>
+    
+    <div class="status" id="status">Aguardando detecção facial...</div>
+    
+    <div class="debug-info" id="debug">Iniciando...</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.9/dist/face-api.min.js"></script>
+    
+    <script>
+        const video = document.getElementById('video');
+        const leftSide = document.getElementById('leftSide');
+        const rightSide = document.getElementById('rightSide');
+        const status = document.getElementById('status');
+        
+        let isRightSide = false;
+        
+        // Verifica se está rodando via HTTP
+        if (window.location.protocol === 'file:') {
+            status.textContent = '⚠️ ERRO: Abra via HTTP (não file://)';
+            status.classList.add('error');
+            const btn = document.createElement('button');
+            btn.textContent = 'Como corrigir?';
+            btn.style.cssText = 'margin-top:10px;padding:10px 20px;font-size:1rem;cursor:pointer;background:#ff6600;color:#fff;border:none;border-radius:5px;';
+            btn.onclick = () => alert('Use: npx serve acesso-negado\nOu: Live Server no VS Code\nOu: python -m http.server 8000');
+            status.appendChild(document.createElement('br'));
+            status.appendChild(btn);
+        }
+        
+        async function setupCamera() {
+            try {
+                updateDebug('Solicitando acesso à câmera...');
+                updateDebug('Protocolo: ' + window.location.protocol);
+                updateDebug('Host: ' + window.location.host);
+                
+                if (window.location.protocol === 'file:') {
+                    throw new Error('ABRA VIA HTTP! Use: npx serve ou Live Server');
+                }
+                
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480, facingMode: 'user' },
+                    audio: false
+                });
+                video.srcObject = stream;
+                updateDebug('Stream obtido, aguardando vídeo...');
+                return new Promise(resolve => {
+                    video.onloadeddata = () => {
+                        updateDebug(`Vídeo carregado: ${video.videoWidth}x${video.videoHeight}`);
+                        resolve();
+                    };
+                    video.onerror = (e) => {
+                        updateDebug('Erro no vídeo: ' + e.message);
+                    };
+                });
+            } catch (err) {
+                updateDebug('ERRO CÂMERA: ' + err.name + ' - ' + err.message);
+                status.textContent = '❌ ' + err.message;
+                status.classList.add('error');
+                
+                // Botão para tentar novamente
+                const btn = document.createElement('button');
+                btn.textContent = 'Tentar Novamente';
+                btn.style.cssText = 'margin-top:10px;padding:10px 20px;font-size:1rem;cursor:pointer;background:#ff0000;color:#fff;border:none;border-radius:5px;';
+                btn.onclick = () => location.reload();
+                status.appendChild(document.createElement('br'));
+                status.appendChild(btn);
+                throw err;
+            }
+        }
+        
+        function updateDebug(msg) {
+            const debug = document.getElementById('debug');
+            const time = new Date().toLocaleTimeString();
+            debug.textContent = `[${time}] ${msg}`;
+            console.log(msg);
+        }
+        
+        async function loadModels() {
+            updateDebug('Carregando modelos TensorFlow...');
+            status.textContent = 'Carregando modelos de IA...';
+            try {
+await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.9/model');
+            updateDebug('tinyFaceDetector OK');
+            await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.9/model');
+                updateDebug('faceLandmark68Net OK');
+                status.textContent = 'Modelos carregados! Detectando...';
+            } catch (err) {
+                updateDebug('ERRO MODELOS: ' + err.message);
+                status.textContent = 'Erro ao carregar modelos: ' + err.message;
+                status.classList.add('error');
+            }
+        }
+        
+        function detectFaceSide(detection) {
+            const videoWidth = video.videoWidth;
+            const faceCenterX = detection.box.x + detection.box.width / 2;
+            updateDebug(`Face detectada: x=${detection.box.x.toFixed(0)}, w=${detection.box.width.toFixed(0)}, center=${faceCenterX.toFixed(0)}, videoW=${videoWidth}`);
+            return faceCenterX > videoWidth / 2;
+        }
+        
+        async function detectLoop() {
+            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions());
+            
+            if (detection) {
+                updateDebug('Face detectada!');
+                const onRightSide = detectFaceSide(detection);
+                
+                if (onRightSide !== isRightSide) {
+                    isRightSide = onRightSide;
+                    
+                    if (isRightSide) {
+                        // Rosto no lado DIREITO = ACESSO NEGADO
+                        rightSide.classList.add('access-denied');
+                        leftSide.classList.remove('access-denied');
+                        status.textContent = '🚫 ACESSO NEGADO - Rosto na zona de perigo!';
+                        status.classList.add('detected');
+                    } else {
+                        // Rosto no lado ESQUERDO = Normal (nada acontece)
+                        leftSide.classList.remove('access-denied');
+                        rightSide.classList.remove('access-denied');
+                        status.textContent = '✅ Lado seguro - Tudo normal';
+                        status.classList.remove('detected');
+                    }
+                }
+            } else {
+                updateDebug('Nenhuma face detectada');
+                if (isRightSide !== false) {
+                    isRightSide = false;
+                    leftSide.classList.remove('access-denied');
+                    rightSide.classList.remove('access-denied');
+                    status.textContent = 'Nenhum rosto detectado';
+                    status.classList.remove('detected');
+                }
+            }
+            
+            requestAnimationFrame(detectLoop);
+        }
+        
+        async function init() {
+            await setupCamera();
+            await loadModels();
+            detectLoop();
+        }
+        
+        init();
+    </script>
+</body>
+</html>
