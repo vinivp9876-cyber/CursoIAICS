@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acerta o Castor</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #1a1a2e; font-family: system-ui, sans-serif; color: #fff; overflow: hidden; }
+  #stage { position: relative; width: 100vw; height: 100vh; }
+  video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  video { opacity: .3; transform: scaleX(-1); }
+  #hud { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; padding: 16px 24px; font-size: clamp(22px, 4vw, 40px); font-weight: 800; text-shadow: 0 2px 8px #000a; pointer-events: none; z-index: 10; }
+  #overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #0b0d14cc; text-align: center; padding: 24px; z-index: 20; }
+  #overlay h1 { margin: 0; font-size: clamp(32px, 6vw, 64px); }
+  #overlay p { margin: 0; max-width: 460px; opacity: .85; }
+  button { font: inherit; font-weight: 700; font-size: 20px; padding: 14px 36px; border: 0; border-radius: 999px; background: #ffd23f; color: #222; cursor: pointer; }
+  button:disabled { opacity: .6; cursor: wait; }
+  [hidden] { display: none !important; }
+  .hole { position: absolute; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #3d2b1f 0%, #1a1008 70%); box-shadow: inset 0 8px 20px #000, 0 4px 10px #0008; border: 4px solid #2a1a0a; z-index: 1; }
+  .beaver { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%); width: 90%; height: 85%; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><ellipse cx="50" cy="75" rx="35" ry="20" fill="%235d4037"/><ellipse cx="50" cy="55" rx="28" ry="22" fill="%236d4c41"/><ellipse cx="38" cy="48" rx="6" ry="5" fill="%23000"/><ellipse cx="62" cy="48" rx="6" ry="5" fill="%23000"/><ellipse cx="50" cy="60" rx="8" ry="5" fill="%238d6e63"/><rect x="42" y="68" width="16" height="6" fill="%23fff"/><ellipse cx="30" cy="40" rx="12" ry="10" fill="%235d4037"/><ellipse cx="70" cy="40" rx="12" ry="10" fill="%235d4037"/></svg>') center/contain no-repeat; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.1s; opacity: 0; pointer-events: none; visibility: hidden; }
+  .beaver.up { transform: translateX(-50%) translateY(0); opacity: 1; visibility: visible; }
+  .beaver.hit { transform: translateX(-50%) translateY(0) rotate(-30deg) scale(0.8); opacity: 0; visibility: hidden; transition: transform 0.2s, opacity 0.2s, visibility 0.2s; }
+  #instruction { position: absolute; bottom: 80px; left: 0; right: 0; text-align: center; font-size: 18px; opacity: 0.8; text-shadow: 0 2px 6px #000; z-index: 10; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <video id="video" playsinline muted></video>
+  <canvas id="canvas"></canvas>
+  <div id="hud"><span>⏱ <span id="time">15</span>s</span><span>🦫 <span id="score">0</span>/18</span></div>
+  <div id="instruction">Aponte o dedo indicador 👇 para acertar os castores!</div>
+  <div id="overlay">
+    <h1 id="title">Acerta o Castor 🦫</h1>
+    <p id="msg">Use o dedo indicador na frente da câmera para acertar os castores que saem dos buracos. Você tem 15 segundos para acertar 18!</p>
+    <button id="btn">Começar</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+<script>
+const DURATION = 15;
+const TOTAL_BEAVERS = 18;
+const NUM_HOLES = 6;
+
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const btn = document.getElementById('btn');
+const timeEl = document.getElementById('time');
+const scoreEl = document.getElementById('score');
+
+let hands = [];
+let running = false, score = 0, startT = 0, beaversSpawned = 0, beaversHit = 0;
+let ready = false;
+let holes = [];
+let holeElements = [];
+
+function resize() {
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+  createHoles();
+}
+addEventListener('resize', resize);
+
+function createHoles() {
+  holeElements.forEach(el => el.remove());
+  holeElements = [];
+  holes = [];
+  
+  const cols = 3;
+  const rows = 2;
+  const marginX = canvas.width * 0.08;
+  const marginY = canvas.height * 0.15;
+  const availW = canvas.width - marginX * 2;
+  const availH = canvas.height - marginY * 2 - 100;
+  const holeSize = Math.min(availW / cols, availH / rows) * 0.85;
+  const gapX = (availW - holeSize * cols) / (cols - 1);
+  const gapY = (availH - holeSize * rows) / (rows - 1);
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = marginX + c * (holeSize + gapX) + holeSize / 2;
+      const y = marginY + r * (holeSize + gapY) + holeSize / 2;
+      holes.push({ x, y, r: holeSize / 2, index: r * cols + c, beaverUp: false, beaverHit: false, spawnTime: 0 });
+      
+      const holeDiv = document.createElement('div');
+      holeDiv.className = 'hole';
+      holeDiv.style.width = holeSize + 'px';
+      holeDiv.style.height = holeSize + 'px';
+      holeDiv.style.left = (x - holeSize / 2) + 'px';
+      holeDiv.style.top = (y - holeSize / 2) + 'px';
+      holeDiv.dataset.index = r * cols + c;
+      
+      const beaverDiv = document.createElement('div');
+      beaverDiv.className = 'beaver';
+      holeDiv.appendChild(beaverDiv);
+      
+      document.getElementById('stage').appendChild(holeDiv);
+      holeElements.push({ hole: holeDiv, beaver: beaverDiv });
+    }
+  }
+}
+
+function toScreen(lm) {
+  const vw = video.videoWidth || 640, vh = video.videoHeight || 480;
+  const s = Math.max(canvas.width / vw, canvas.height / vh);
+  const ox = (canvas.width - vw * s) / 2, oy = (canvas.height - vh * s) / 2;
+  // Vídeo é espelhado (scaleX(-1)), MediaPipe processa vídeo cru
+  // Espelhar X para alinhar com o que o usuário vê
+  return { x: canvas.width - (lm.x * vw * s + ox), y: lm.y * vh * s + oy };
+}
+
+let mpHands = null, detecting = false, camOk = false;
+const statusEl = document.createElement('div');
+statusEl.style.cssText = 'position:absolute;bottom:16px;left:0;right:0;text-align:center;font-weight:600;text-shadow:0 2px 6px #000';
+document.getElementById('stage').appendChild(statusEl);
+
+function setupHands() {
+  if (typeof Hands === 'undefined') { statusEl.textContent = '⚠ Biblioteca MediaPipe não carregou (verifique a internet)'; return; }
+  mpHands = new Hands({
+    locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${f}`
+  });
+  mpHands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
+  mpHands.onResults(res => {
+    statusEl.textContent = '';
+    hands = (res.multiHandLandmarks || []).map(l => l.map(toScreen));
+  });
+  statusEl.textContent = 'Carregando detecção de mão…';
+}
+
+async function detectLoop() {
+  if (mpHands && !detecting && video.readyState >= 2) {
+    detecting = true;
+    try { await mpHands.send({ image: video }); }
+    catch (e) { statusEl.textContent = '⚠ Erro na detecção: ' + e.message; }
+    detecting = false;
+  }
+  requestAnimationFrame(detectLoop);
+}
+
+async function init() {
+  btn.disabled = true; btn.textContent = 'Abrindo câmera…';
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, frameRate: 30, facingMode: 'user' }, audio: false });
+    video.srcObject = stream;
+    await video.play();
+    camOk = true;
+  } catch (e) {
+    document.getElementById('msg').textContent = 'Não consegui acessar a câmera. Permita o acesso e abra via http://localhost ou https.';
+    btn.disabled = false; btn.textContent = 'Tentar de novo';
+    return;
+  }
+  setupHands();
+  detectLoop();
+  ready = true;
+  start();
+}
+
+let nextSpawnTime = 0;
+let spawnInterval = 0;
+
+function start() {
+  score = 0; beaversSpawned = 0; beaversHit = 0;
+  scoreEl.textContent = 0; timeEl.textContent = DURATION;
+  holes.forEach(h => { h.beaverUp = false; h.beaverHit = false; });
+  holeElements.forEach(({ beaver }) => { beaver.classList.remove('up', 'hit'); });
+  overlay.hidden = true;
+  running = true; startT = performance.now();
+  spawnInterval = DURATION * 1000 / TOTAL_BEAVERS;
+  nextSpawnTime = startT;
+  spawnBeaver(); // Primeiro castor aparece imediatamente
+}
+
+function end() {
+  running = false;
+  let msg, subMsg;
+  if (beaversHit > 9) {
+    msg = `Vitória! ${beaversHit}/${TOTAL_BEAVERS} 🎉`;
+    subMsg = 'Parabéns! Você ganhou!';
+  } else if (beaversHit < 9) {
+    msg = `Derrota! ${beaversHit}/${TOTAL_BEAVERS} 😢`;
+    subMsg = 'Tente novamente para vencer!';
+  } else {
+    msg = `Empate! ${beaversHit}/${TOTAL_BEAVERS} 🤝`;
+    subMsg = 'Quase lá! Tente de novo para ganhar!';
+  }
+  document.getElementById('title').textContent = msg;
+  document.getElementById('msg').textContent = subMsg;
+  btn.disabled = false; btn.textContent = 'Jogar de novo';
+  overlay.hidden = false;
+}
+
+btn.onclick = () => ready ? start() : init();
+
+const INDEX_TIP = 8;
+
+function spawnBeaver() {
+  const availableHoles = holes.filter(h => !h.beaverUp);
+  if (availableHoles.length === 0) return;
+  
+  const hole = availableHoles[Math.floor(Math.random() * availableHoles.length)];
+  hole.beaverUp = true;
+  hole.beaverHit = false;
+  hole.spawnTime = performance.now();
+  
+  const el = holeElements[hole.index];
+  if (el) {
+    el.beaver.classList.remove('hit');
+    void el.beaver.offsetWidth;
+    el.beaver.classList.add('up');
+  }
+  
+  beaversSpawned++;
+  
+  setTimeout(() => {
+    if (hole.beaverUp && !hole.beaverHit) {
+      hole.beaverUp = false;
+      if (el) el.beaver.classList.remove('up');
+    }
+    // Resetar beaverHit quando o castor desce (seja por timeout ou acerto)
+    hole.beaverHit = false;
+  }, 1200);
+}
+
+function loop() {
+  const now = performance.now();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (running) {
+    const elapsed = (now - startT) / 1000;
+    const left = Math.max(0, DURATION - elapsed);
+    timeEl.textContent = Math.ceil(left);
+    
+    if (left <= 0) {
+      end();
+    } else if (beaversSpawned < TOTAL_BEAVERS && now >= nextSpawnTime) {
+      spawnBeaver();
+      nextSpawnTime = now + spawnInterval;
+    }
+  }
+
+  for (const h of holes) {
+    if (h.beaverUp && !h.beaverHit) {
+      const age = now - h.spawnTime;
+      if (age > 1200) {
+        h.beaverUp = false;
+        const el = holeElements[h.index];
+        if (el) el.beaver.classList.remove('up');
+      }
+    }
+  }
+
+  if (running) {
+    for (const h of hands) {
+      if (h[INDEX_TIP]) {
+        const tipX = h[INDEX_TIP].x;
+        const tipY = h[INDEX_TIP].y;
+        
+        for (const hole of holes) {
+          if (hole.beaverUp && !hole.beaverHit) {
+            const dx = tipX - hole.x;
+            const dy = tipY - hole.y;
+            const dist = Math.hypot(dx, dy);
+            
+            if (dist < hole.r * 1.1) {
+              hole.beaverHit = true;
+              hole.beaverUp = false;
+              beaversHit++;
+              score++;
+              scoreEl.textContent = score;
+              
+              const el = holeElements[hole.index];
+              if (el) {
+                el.beaver.classList.remove('up');
+                el.beaver.classList.add('hit');
+                setTimeout(() => el.beaver.classList.remove('hit'), 300);
+              }
+              
+              // Resetar beaverHit para que o buraco possa ser reutilizado
+              setTimeout(() => { hole.beaverHit = false; }, 300);
+              
+              ctx.fillStyle = '#ffd23f';
+              ctx.font = 'bold 40px system-ui';
+              ctx.textAlign = 'center';
+              ctx.fillText('+1', hole.x, hole.y - hole.r - 10);
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  for (const hand of hands) {
+    ctx.fillStyle = '#ffd23f';
+    ctx.beginPath();
+    ctx.arc(hand[INDEX_TIP].x, hand[INDEX_TIP].y, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 28px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(score, hand[INDEX_TIP].x, hand[INDEX_TIP].y - 35);
+    
+    ctx.strokeStyle = '#ffd23f';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(hand[9].x, hand[9].y, 30, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  requestAnimationFrame(loop);
+}
+resize();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
