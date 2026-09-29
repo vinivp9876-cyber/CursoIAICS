@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Achados e Perdidos</title>
+  <link rel="icon" type="image/png" href="logo-box.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="intro">
+    <div class="cena">
+      <p class="hint" id="hint">Role para abrir a caixa &#9660;</p>
+      <div class="palco">
+        <div class="caixa3d" id="caixa3d">
+          <div class="brilho" id="brilho"></div>
+          <div class="abertura"></div>
+          <div class="frente"></div>
+          <div class="tampa" id="tampa"></div>
+        </div>
+      </div>
+      <div class="flash" id="flash"></div>
+    </div>
+  </div>
+  <div id="stage" aria-hidden="true"></div>
+
+  <main class="container">
+    <header class="header">
+      <div class="header-titulo">
+        <img src="logo-box.png" alt="Logo do Sistema de Achados e Perdidos" class="logo" />
+        <div>
+          <h1>Achados e Perdidos</h1>
+          <p>Cadastre e encontre objetos perdidos na escola.</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="stats" id="stats"></section>
+
+    <section class="card">
+      <h2>Cadastrar objeto</h2>
+      <form id="formObjeto">
+        <label for="nome">Objeto:</label>
+        <input type="text" id="nome" name="nome" required maxlength="100" placeholder="Ex.: Fone de ouvido" />
+
+        <label for="descricao">Descrição:</label>
+        <textarea id="descricao" name="descricao" rows="3" placeholder="Ex.: Fone preto JBL"></textarea>
+
+        <label for="local_encontrado">Local encontrado:</label>
+        <input type="text" id="local_encontrado" name="local_encontrado" required maxlength="100" placeholder="Ex.: Sala 12" />
+
+        <label for="data_encontrado">Data:</label>
+        <input type="date" id="data_encontrado" name="data_encontrado" required />
+
+        <button type="submit" class="btn btn-primary">Cadastrar</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="list-header">
+        <h2>Objetos encontrados</h2>
+        <div class="search-area">
+          <input type="text" id="busca" placeholder="Pesquisar objeto..." />
+          <button class="btn btn-secondary" id="btnBusca">🔍</button>
+        </div>
+      </div>
+      <div id="listaObjetos" class="lista"></div>
+      <p id="semResultados" class="empty" hidden>Nenhum objeto encontrado.</p>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
