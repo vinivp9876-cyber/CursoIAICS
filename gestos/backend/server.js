@@ -6,15 +6,21 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SECRET_KEY;
+const supabaseUrl = (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
+const supabaseKey = (process.env.SUPABASE_SECRET_KEY || '').trim();
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('SUPABASE_URL e SUPABASE_SECRET_KEY devem estar definidos no .env');
-  process.exit(1);
+const supabaseConfigurado =
+  !!supabaseUrl && !!supabaseKey &&
+  !/^SUA_|_AQUI$/i.test(supabaseUrl) &&
+  !/^SUA_|_AQUI$/i.test(supabaseKey);
+
+const supabase = supabaseConfigurado ? createClient(supabaseUrl, supabaseKey) : null;
+
+if (!supabaseConfigurado) {
+  console.warn('Aviso: Supabase não configurado. Usando armazenamento em memória (os dados são perdidos ao reiniciar).');
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const memoria = [];
 
 const GESTOS_PERMITIDOS = ['aberta', 'fechada', 'positivo'];
 
@@ -33,10 +39,15 @@ app.post('/api/gestos', async (req, res) => {
     if (!gesto || !GESTOS_PERMITIDOS.includes(gesto)) {
       return res.status(400).json({ erro: 'Gesto inválido' });
     }
-    const { data, error } = await supabase
-      .from('gestos_registrados')
-      .insert([{ gesto, confianca: confianca || null }]);
-    if (error) throw error;
+    if (supabase) {
+      const { error } = await supabase
+        .from('gestos_registrados')
+        .insert([{ gesto, confianca: confianca || null }]);
+      if (error) throw error;
+    } else {
+      memoria.push({ gesto, confianca: confianca || null, data_hora: new Date().toISOString() });
+      if (memoria.length > 100) memoria.shift();
+    }
     res.status(201).json({ sucesso: true });
   } catch (err) {
     console.error(err);
@@ -46,13 +57,16 @@ app.post('/api/gestos', async (req, res) => {
 
 app.get('/api/gestos', async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('gestos_registrados')
-      .select('*')
-      .order('data_hora', { ascending: false })
-      .limit(10);
-    if (error) throw error;
-    res.json(data || []);
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('gestos_registrados')
+        .select('*')
+        .order('data_hora', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return res.json(data || []);
+    }
+    res.json(memoria.slice(-10).reverse());
   } catch (err) {
     console.error(err);
     res.status(500).json({ erro: 'Erro ao buscar histórico' });
