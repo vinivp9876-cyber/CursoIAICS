@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Honda - Carros</title>
+    <link rel="icon" type="image/png" href="/static/cars/honda-logo.png">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .floating-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: linear-gradient(135deg, rgba(200, 16, 46, 0.95), rgba(140, 10, 30, 0.95));
+            backdrop-filter: blur(20px);
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 30px rgba(200, 16, 46, 0.4);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .honda-logo {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .honda-logo svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .floating-header h1 {
+            font-size: 1.8rem;
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .floating-header .subtitle {
+            font-size: 0.85rem;
+            font-weight: 300;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        .hero {
+            margin-top: 100px;
+            padding: 60px 30px 30px;
+            text-align: center;
+            background: radial-gradient(ellipse at center, rgba(200, 16, 46, 0.15) 0%, transparent 70%);
+        }
+
+        .hero h2 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 10px;
+        }
+
+        .hero h2 strong {
+            font-weight: 900;
+            color: #e81033;
+        }
+
+        .hero p {
+            color: #999;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+        }
+
+        .car-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 30px;
+            padding: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .car-card {
+            background: linear-gradient(145deg, #1a1a1a, #111);
+            border-radius: 20px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(200, 16, 46, 0.2);
+            position: relative;
+        }
+
+        .car-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            border-color: rgba(200, 16, 46, 0.6);
+            box-shadow: 0 20px 60px rgba(200, 16, 46, 0.3);
+        }
+
+        .car-card .car-image {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+
+        .car-card:hover .car-image {
+            transform: scale(1.05);
+        }
+
+        .car-card .image-wrapper {
+            overflow: hidden;
+            position: relative;
+        }
+
+        .car-card .image-wrapper::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60%;
+            background: linear-gradient(to top, #1a1a1a, transparent);
+        }
+
+        .car-card .car-info {
+            padding: 20px 25px 25px;
+        }
+
+        .car-card .car-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .car-card .car-type {
+            color: #e81033;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .car-card .car-year {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 8px;
+        }
+
+        .car-card .ver-mais {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 15px;
+            color: #e81033;
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+
+        .car-card .ver-mais::after {
+            content: '→';
+            transition: transform 0.3s ease;
+        }
+
+        .car-card:hover .ver-mais::after {
+            transform: translateX(5px);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            z-index: 200;
+            justify-content: center;
+            align-items: flex-start;
+            overflow-y: auto;
+            padding: 40px 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
+            border-radius: 24px;
+            max-width: 800px;
+            width: 100%;
+            border: 1px solid rgba(200, 16, 46, 0.3);
+            box-shadow: 0 30px 100px rgba(200, 16, 46, 0.2);
+            overflow: hidden;
+            animation: modalIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin: auto;
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-header {
+            position: relative;
+        }
+
+        .modal-header img {
+            width: 100%;
+            height: 350px;
+            object-fit: cover;
+        }
+
+        .modal-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(to top, #1a1a1a, transparent);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 1.4rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-close:hover {
+            background: #e81033;
+            border-color: #e81033;
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 10px 35px 35px;
+        }
+
+        .modal-body h2 {
+            font-size: 2.2rem;
+            font-weight: 900;
+            margin-bottom: 5px;
+        }
+
+        .modal-body .modal-subtitle {
+            color: #e81033;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 25px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .info-item {
+            background: rgba(200, 16, 46, 0.08);
+            border: 1px solid rgba(200, 16, 46, 0.15);
+            border-radius: 14px;
+            padding: 18px;
+            transition: all 0.3s ease;
+        }
+
+        .info-item:hover {
+            background: rgba(200, 16, 46, 0.15);
+            border-color: rgba(200, 16, 46, 0.3);
+        }
+
+        .info-item .label {
+            color: #888;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .info-item .value {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .fipe-section {
+            margin-top: 10px;
+        }
+
+        .fipe-section h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .fipe-section h3 .icon {
+            font-size: 1.5rem;
+        }
+
+        .fipe-loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .fipe-loading .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(200, 16, 46, 0.2);
+            border-top-color: #e81033;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .fipe-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .fipe-table thead th {
+            background: rgba(200, 16, 46, 0.15);
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #e81033;
+            border-bottom: 2px solid rgba(200, 16, 46, 0.3);
+        }
+
+        .fipe-table tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s ease;
+        }
+
+        .fipe-table tbody tr:hover {
+            background: rgba(200, 16, 46, 0.08);
+        }
+
+        .fipe-table td {
+            padding: 14px 16px;
+        }
+
+        .fipe-table .preco {
+            color: #4caf50;
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .fipe-erro {
+            text-align: center;
+            padding: 30px;
+            color: #ff6b6b;
+            background: rgba(255, 50, 50, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 50, 50, 0.1);
+        }
+
+        .fipe-empty {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #444;
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        footer strong {
+            color: #e81033;
+        }
+
+        .floating-person {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            z-index: 1000;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e81033, #c0102e);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 25px rgba(200, 16, 46, 0.5);
+            transition: transform 0.3s ease;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .floating-person:hover {
+            transform: scale(1.1);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+
+        .chat-widget {
+            display: none;
+            position: fixed;
+            bottom: 110px;
+            left: 30px;
+            z-index: 1001;
+            width: 350px;
+            max-height: 520px;
+            background: linear-gradient(145deg, #1a1a1a, #111);
+            border-radius: 16px;
+            border: 1px solid rgba(200, 16, 46, 0.3);
+            box-shadow: 0 10px 50px rgba(0,0,0,0.6);
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .chat-widget.open {
+            display: flex;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #e81033, #c0102e);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .chat-header .close-btn {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+            line-height: 1;
+        }
+
+        .chat-header .close-btn:hover {
+            opacity: 1;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 360px;
+        }
+
+        .chat-msg {
+            padding: 10px 14px;
+            border-radius: 12px;
+            max-width: 85%;
+            word-wrap: break-word;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .chat-msg.user {
+            background: rgba(200, 16, 46, 0.2);
+            border: 1px solid rgba(200, 16, 46, 0.3);
+            align-self: flex-end;
+            color: #fff;
+        }
+
+        .chat-msg.bot {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            align-self: flex-start;
+            color: #ccc;
+        }
+
+        .chat-input-area {
+            padding: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(200, 16, 46, 0.3);
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .chat-input-area input:focus {
+            border-color: #e81033;
+        }
+
+        .chat-input-area button {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            background: #e81033;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .chat-input-area button:hover {
+            background: #c0102e;
+        }
+
+        .contact-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #e81033, #c0102e);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.95rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(200, 16, 46, 0.5);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            letter-spacing: 0.5px;
+        }
+
+        .contact-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(200, 16, 46, 0.6);
+            background: linear-gradient(135deg, #f01040, #d01030);
+        }
+
+        @media (max-width: 768px) {
+            .car-grid {
+                grid-template-columns: 1fr;
+                padding: 20px;
+                gap: 20px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-body {
+                padding: 10px 20px 25px;
+            }
+
+            .floating-header h1 {
+                font-size: 1.2rem;
+            }
+
+            .hero h2 {
+                font-size: 1.6rem;
+            }
+
+            .fipe-table {
+                font-size: 0.8rem;
+            }
+
+            .fipe-table thead th,
+            .fipe-table td {
+                padding: 10px 8px;
+            }
+
+            .floating-person {
+                width: 56px;
+                height: 56px;
+                bottom: 20px;
+                left: 20px;
+            }
+
+            .chat-widget {
+                width: calc(100% - 40px);
+                left: 20px;
+                bottom: 90px;
+                max-height: 450px;
+            }
+
+            .contact-btn {
+                font-size: 0.8rem;
+                padding: 12px 20px;
+                right: 20px;
+                bottom: 20px;
+                max-width: 60%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="floating-header">
+        <div class="honda-logo">
+            <img src="/static/cars/honda-logo.png" alt="Honda Logo" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+        <div>
+            <h1>Honda</h1>
+            <div class="subtitle">The Power of Dreams</div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <h2>Conheça a <strong>linha Honda</strong></h2>
+        <p>Clique em um carro para ver detalhes e tabela FIPE</p>
+    </section>
+
+    <div class="car-grid" id="carGrid"></div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <button class="modal-close" id="modalClose">✕</button>
+                <img id="modalImage" src="" alt="">
+            </div>
+            <div class="modal-body">
+                <h2 id="modalName"></h2>
+                <div class="modal-subtitle" id="modalType"></div>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="label">Anos de Produção</div>
+                        <div class="value" id="modalYear"></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">Potência</div>
+                        <div class="value" id="modalPotencia"></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">Câmbio</div>
+                        <div class="value" id="modalCambio"></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">Combustível</div>
+                        <div class="value" id="modalCombustivel"></div>
+                    </div>
+                </div>
+
+                <div class="info-item" style="margin-bottom: 30px;">
+                    <div class="label">Motorizações</div>
+                    <div class="value" id="modalMotor"></div>
+                </div>
+
+                <div class="fipe-section">
+                    <h3><span class="icon">📊</span> Tabela FIPE</h3>
+                    <div id="fipeContent">
+                        <div class="fipe-loading">
+                            <div class="spinner"></div>
+                            Consultando Tabela FIPE...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <strong>Honda</strong> — The Power of Dreams
+    </footer>
+
+    <div class="floating-person" id="floatingPerson" onclick="toggleChat()">
+        <img src="https://i.pravatar.cc/100?img=47" alt="Atendente" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
+    </div>
+
+    <div class="chat-widget" id="chatWidget">
+        <div class="chat-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Assistente Honda
+            <button class="close-btn" onclick="toggleChat()">×</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-msg bot">Olá! Como posso ajudar você com os carros Honda?</div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Digite sua dúvida..." onkeypress="if(event.key==='Enter') sendChat()">
+            <button onclick="sendChat()">Enviar</button>
+        </div>
+    </div>
+
+    <a href="https://www.honda.com.br" target="_blank" rel="noopener noreferrer" class="contact-btn">
+        Para entrar em contato com a loja aperte aqui
+    </a>
+
+    <script>
+        const grid = document.getElementById('carGrid');
+        const overlay = document.getElementById('modalOverlay');
+
+        async function loadCars() {
+            try {
+                const res = await fetch('/api/carros');
+                const cars = await res.json();
+                cars.forEach(car => {
+                    const card = document.createElement('div');
+                    card.className = 'car-card';
+                    card.innerHTML = `
+                        <div class="image-wrapper">
+                            <img class="car-image" src="${car.imagem}" alt="${car.nome}"
+                                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 250%22><rect fill=%22%231a1a1a%22 width=%22400%22 height=%22250%22/><text fill=%22%23e81033%22 x=%2250%%22 y=%2250%%22 font-size=%2240%22 text-anchor=%22middle%22 dy=%22.3em%22>Honda ${car.nome}</text></svg>'">
+                        </div>
+                        <div class="car-info">
+                            <div class="car-name">${car.nome}</div>
+                            <div class="car-type">${car.genero}</div>
+                            <div class="car-year">${car.ano}</div>
+                            <div class="ver-mais">Ver detalhes</div>
+                        </div>
+                    `;
+                    card.onclick = () => openModal(car);
+                    grid.appendChild(card);
+                });
+            } catch (err) {
+                grid.innerHTML = '<p style="text-align:center;color:#666;grid-column:1/-1;padding:40px;">Erro ao carregar carros.</p>';
+            }
+        }
+
+        function openModal(car) {
+            document.getElementById('modalImage').src = car.imagem;
+            document.getElementById('modalImage').alt = car.nome;
+            document.getElementById('modalName').textContent = car.nome;
+            document.getElementById('modalType').textContent = car.genero;
+            document.getElementById('modalYear').textContent = car.ano;
+            document.getElementById('modalPotencia').textContent = car.potencia;
+            document.getElementById('modalCambio').textContent = car.cambio;
+            document.getElementById('modalCombustivel').textContent = car.combustivel;
+            document.getElementById('modalMotor').textContent = car.motorizacoes.join(' | ');
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            loadFIPE(car.nome);
+        }
+
+        function closeModal() {
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        document.getElementById('modalClose').onclick = closeModal;
+        overlay.onclick = (e) => {
+            if (e.target === overlay) closeModal();
+        };
+        document.onkeydown = (e) => {
+            if (e.key === 'Escape') closeModal();
+        };
+
+        async function loadFIPE(name) {
+            const container = document.getElementById('fipeContent');
+            container.innerHTML = '<div class="fipe-loading"><div class="spinner"></div>Consultando Tabela FIPE...</div>';
+
+            try {
+                const res = await fetch(`/api/fipe/${encodeURIComponent(name)}`);
+                const data = await res.json();
+
+                if (data.erro || !data.fipe || data.fipe.length === 0) {
+                    container.innerHTML = `<div class="fipe-empty">Dados FIPE não disponíveis para este modelo no momento.</div>`;
+                    return;
+                }
+
+                let html = `
+                    <table class="fipe-table">
+                        <thead>
+                            <tr>
+                                <th>Modelo</th>
+                                <th>Ano</th>
+                                <th>Combustível</th>
+                                <th>Preço FIPE</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                data.fipe.forEach(item => {
+                    const preco = item.Valor
+                        ? item.Valor
+                        : 'Consultar';
+                    html += `
+                        <tr>
+                            <td>${item.Modelo || name}</td>
+                            <td>${item.AnoModelo || '-'}</td>
+                            <td>${item.Combustivel || '-'}</td>
+                            <td class="preco">${preco}</td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+
+            } catch (err) {
+                container.innerHTML = `<div class="fipe-erro">Erro ao consultar Tabela FIPE. Tente novamente.</div>`;
+            }
+        }
+
+        loadCars();
+
+        function toggleChat() {
+            document.getElementById('chatWidget').classList.toggle('open');
+            document.getElementById('chatInput').focus();
+        }
+
+        async function sendChat() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            const msgs = document.getElementById('chatMessages');
+
+            const userDiv = document.createElement('div');
+            userDiv.className = 'chat-msg user';
+            userDiv.textContent = msg;
+            msgs.appendChild(userDiv);
+            msgs.scrollTop = msgs.scrollHeight;
+            input.value = '';
+
+            const loadDiv = document.createElement('div');
+            loadDiv.className = 'chat-msg bot';
+            loadDiv.textContent = 'Pensando...';
+            msgs.appendChild(loadDiv);
+            msgs.scrollTop = msgs.scrollHeight;
+
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mensagem: msg })
+                });
+                const data = await res.json();
+                loadDiv.textContent = data.resposta || data.erro || 'Erro ao obter resposta.';
+            } catch (err) {
+                loadDiv.textContent = 'Erro ao conectar com o servidor.';
+            }
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+    </script>
+</body>
+</html>

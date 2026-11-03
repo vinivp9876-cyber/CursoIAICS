@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Alunos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎓 Sistema de Alunos</h1>
+        <div class="formulario">
+            <h2>Cadastrar aluno</h2>
+            <input
+                type="text"
+                id="nome"
+                placeholder="Nome do aluno"
+            >
+            <input
+                type="number"
+                id="idade"
+                placeholder="Idade"
+            >
+            <input
+                type="number"
+                id="nota1"
+                placeholder="Nota 1"
+                step="0.1"
+                min="0"
+                max="10"
+            >
+            <input
+                type="number"
+                id="nota2"
+                placeholder="Nota 2"
+                step="0.1"
+                min="0"
+                max="10"
+            >
+            <button onclick="cadastrarAluno()">
+                Cadastrar
+            </button>
+        </div>
+
+        <div class="formulario">
+            <h2>Buscar aluno</h2>
+            <input
+                type="text"
+                id="busca"
+                placeholder="Digite o nome do aluno..."
+                oninput="buscarAlunos()"
+            >
+        </div>
+
+
+        <div class="alunos">
+            <h2>Alunos cadastrados</h2>
+            <div id="listaAlunos">
+                <p>Nenhum aluno cadastrado.</p>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
