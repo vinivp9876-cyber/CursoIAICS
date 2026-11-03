@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestos Inteligentes</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm/index.mjs"
+    }
+  }
+  </script>
+  <script type="module" src="script.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Gestos Inteligentes</h1>
+    <p>Reconhecimento de gestos da m&atilde;o em tempo real com MediaPipe e Supabase.</p>
+  </header>
+
+  <main>
+    <section class="camera">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="canvas"></canvas>
+    </section>
+
+    <section class="controls">
+      <button id="btn-start">Iniciar c&acirc;mera</button>
+      <button id="btn-stop" disabled>Parar c&acirc;mera</button>
+    </section>
+
+    <section class="status">
+      <div id="status" class="status-badge aguardando">Aguardando c&acirc;mera</div>
+      <div id="error" class="error-msg" aria-live="polite"></div>
+    </section>
+
+    <section class="resumo">
+      <div class="card">
+        <strong>&uacute;ltimo gesto:</strong>
+        <span id="last-gesture">-</span>
+      </div>
+      <div class="contadores">
+        <div class="contador"><span id="counter-aberta">0</span> aberta</div>
+        <div class="contador"><span id="counter-fechada">0</span> fechada</div>
+        <div class="contador"><span id="counter-positivo">0</span> positivo</div>
+      </div>
+    </section>
+
+    <section class="historico">
+      <h2>Histórico (&uacute;ltimos 10)</h2>
+      <ul id="history-list"></ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>Projeto didático &mdash; chave secreta fica apenas no servidor.</p>
+  </footer>
+</body>
+</html>
