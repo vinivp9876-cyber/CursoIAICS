@@ -1,0 +1,7 @@
+{
+  "name": "agente-analisador-curriculos",
+  "version": "1.0.0",
+  "description": "Agente de IA que analisa currículos para uma vaga de emprego usando o modelo openai/gpt-oss-20b",
+  "type": "module",
+  "main": "agentesAnalisador.js"
+}
